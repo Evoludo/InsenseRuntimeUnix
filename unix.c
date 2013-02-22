@@ -78,6 +78,7 @@ void component_exit()
 
 void component_yield(void)
 {
+	// don't need this in unix; scheduler is cleverer than we are
 	return;
 }
 
