@@ -45,7 +45,7 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     pthread_t *thread = malloc(sizeof(pthread_t));
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_create(thread, &attr, behaviour_start, (void*)args);
+    pthread_create(thread, &attr, (void*)behaviour_start, (void*)args);
 
     void **temp;
     //pthread_join(*thread, temp);
@@ -82,6 +82,7 @@ Channel_PNTR channel_create(int typesize)
 	this->typesize = typesize;
 	this->buffer = DAL_alloc(typesize, false); // sending data by value in this implementation, so allocate buffer
 	this->ready = false;
+	this->connections = DAL_alloc(sizeof(List_PNTR), false);
         DAL_assign(this->connections, Construct_List()); // empty list of connections
 	sem_init(&(this->conns_sem), 0, 0);	// initialise semaphore to 0 connections
 	pthread_mutex_init(&this->mutex, NULL);
@@ -94,17 +95,7 @@ Channel_PNTR channel_create(int typesize)
         return(this);
 }
 
-/*
-Channel_PNTR channel_create(enum direction dir, int typesize, bool contains_pointers)
-{
-	return 0;
-}
-*/
-
 static void Channel_decRef(Channel_PNTR pntr){
-        if(pntr->buffer.tag == POINTER){
-                DAL_decRef(pntr->buffer.pointer_value);
-        }
         channel_unbind(pntr);
 	DAL_decRef(pntr->buffer);
         DAL_decRef(pntr->connections);

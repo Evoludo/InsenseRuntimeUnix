@@ -10,7 +10,7 @@
 //#include "lib/sensors.h"
 
 #include "BSTMap.h"
-#include "InsenseRadio.h"
+//#include "InsenseRadio.h"
 
 
 extern bool success;

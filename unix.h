@@ -23,7 +23,7 @@
 #include "IteratedList.h"
 
 // channel struct
-typedef struct Channel Channel, Channel_PNTR;
+typedef struct Channel Channel, *Channel_PNTR;
 struct Channel
 {
 	void (*decRef)(Channel_PNTR pntr); // GC decRef
@@ -36,7 +36,7 @@ struct Channel
 	pthread_mutex_t blocked;	// block component if waiting for other channel
 };
 
-typedef Channel_PNTR chan_id; // channel pointer is unique, let's use it as id (remove when refactoring)
+//typedef Channel_PNTR chan_id; // channel pointer is unique, let's use it as id (remove when refactoring)
 
 // select struct
 struct select_struct
