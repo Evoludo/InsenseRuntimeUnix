@@ -1,0 +1,74 @@
+# Makefile needed by Insense build system to build runtime library
+ifndef INSENSE_RUNTIME_UNIX
+     $(error INSENSE_RUNTIME_UNIX not defined! You must specify where INSENSE_RUNTIME_UNIX resides!)
+endif
+
+
+STANDARD_FUNCTIONS = StandardFunctionsAbsInt.c StandardFunctionsAbsReal.c \
+  StandardFunctionsAvgIntArray.c StandardFunctionsAvgRealArray.c \
+  StandardFunctionsByteArrayEqual.c StandardFunctionsIntToByte.c StandardFunctionsIntToUnsigned.c \
+  StandardFunctionsRealToInt.c StandardFunctionsSquareInt.c \
+  StandardFunctionsSquareReal.c StandardFunctionsSquareRoot.c \
+  StandardFunctionsPrintInt.c StandardFunctionsPrintUnsignedInt.c StandardFunctionsPrintByte.c \
+  StandardFunctionsPrintReal.c StandardFunctionsPrintString.c StandardFunctionsGetString.c \
+  StandardFunctionsParseInt.c StandardFunctionsParseReal.c StandardFunctionsParseUnsigned.c \
+  StandardFunctionsStringEquals.c StandardFunctionsPrintTCString.c StandardFunctionsPrintTCInt.c \
+  StandardFunctionsPrintTCReal.c StandardFunctionsPrintTCUnsignedInt.c StandardFunctionsPrintTCByte.c
+  
+ANY_TYPE = AnyTypeConstructCommon.c AnyTypeConstructBool.c \
+  AnyTypeConstructByte.c AnyTypeConstructInt.c AnyTypeConstructUnsignedInt.c \
+  AnyTypeConstructPointer.c AnyTypeConstructReal.c \
+  AnyTypeProjectIsEqual.c AnyTypeProjectBool.c \
+  AnyTypeProjectByte.c AnyTypeProjectInt.c AnyTypeProjectUnsignedInt.c \
+  AnyTypeProjectPointer.c AnyTypeProjectReal.c
+
+C_STANDARD_FUNCTIONS = getchar.c getstring.c print_tc.c
+
+C_STRING = cstring_address_to_string.c cstring_memncpy.c cstring_myitoa.c cstring_string_to_address.c  cstring_stringcat.c cstring_stringStartsWith.c 
+
+UNIX_FUNCTIONS = unix.c
+
+ITERATED_LIST = IteratedListConstruct.c IteratedListContains.c \
+  IteratedListDisplayList.c IteratedListFreeNode.c \
+  IteratedListGetElementN.c IteratedListGetListLength.c \
+  IteratedListGetNextElement.c IteratedListGetRandomElement.c \
+  IteratedListInsert.c IteratedListIsEmpty.c \
+  IteratedListRemoveAll.c IteratedListRemove.c \
+  IteratedListSearchList.c
+
+DAL_MEM = DAL_mem_common.c DAL_mem_contains_pointers.c DAL_mem_getRef.c
+
+RADIO = RadioPacket.c InsenseRadio.c
+
+INSENSE_SRCFILES = $(ANY_TYPE) $(C_STRING) $(UNIX_FUNCTIONS) $(ITERATED_LIST) DAL_error.c $(DAL_MEM) GlobalVars.c IArray.c \
+  $(STANDARD_FUNCTIONS) Bool.c StdOut.c String.c FunctionPair.c GlobalObjects.c BSTMap.c StackSpaceTrack.c
+
+ifeq ($(TARGET), sky)
+#INSENSE_SRCFILES += malloc.c
+INSENSE_SRCFILES += $(C_STANDARD_FUNCTIONS)
+endif
+
+ifdef USE_STRDUP
+USESTRDUP = -DUSESTRDUP
+endif
+
+ifeq ($(TARGET), sky)
+CONTIKI_SKY = -DCONTIKI_SKY
+endif
+
+INSENSE_OBJECTFILES = ${addprefix $(INSENSE_RUNTIME_UNIX)/,$(INSENSE_SRCFILES:.c=.o)}
+
+INSENSEFLAGS = $(CONTIKI_SKY) $(USESTRDUP) -g -std=gnu89 -I $(INSENSE_RUNTIME_UNIX)
+
+ifndef AROPTS
+  AROPTS = rcf
+endif
+
+LDFLAGS = -lc -lpthread --entry main -I/lib64/ld-linux-x86-64.so.2
+
+insense_runtime_unix.a: $(INSENSE_OBJECTFILES) 
+	$(AR) $(AROPTS) $@ $^
+
+%.o: %.c
+	$(CC) $(INSENSEFLAGS) $(TARGETFLAGS) -c -o $@ $<
+
