@@ -22,11 +22,14 @@
 #include "DAL_error.h"
 #include "IteratedList.h"
 
-// channel struct
+// channel struct stuff
+typedef enum { IN, OUT } chan_dir;
+
 typedef struct Channel Channel, *Channel_PNTR;
 struct Channel
 {
 	void (*decRef)(Channel_PNTR pntr); // GC decRef
+	chan_dir direction;	// for error checking in bind, etc.
 	size_t typesize;	// how large the buffer is
 	void* buffer;		// data to send/receive
 	bool ready;		// ready flag
@@ -93,9 +96,10 @@ typedef struct Ithis_s
 typedef struct args_s
 {
 	void (*behaviour)(void*);
-	Ithis_s *this_ptr;
+	Ithis_s* this_ptr;
 	int argc;
-	void **argv;
+	void** argv;
+	pthread_mutex_t* init;
 } args_s;
 
 void *component_create(void(*behaviour)(), int struct_size, int stack_size, int argc, void *argv[]);

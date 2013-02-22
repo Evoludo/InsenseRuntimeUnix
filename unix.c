@@ -34,6 +34,10 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     	memset(this_ptr, 0, (size_t)struct_size);
     }
 
+    // need to wait until the thread has finished initialising its channels, etc.
+    pthread_mutex_t* init = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(init, NULL);
+
     this_ptr->stopped = false;
 
     args_s *args = malloc(sizeof(args_s));
@@ -41,11 +45,19 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     args->this_ptr = this_ptr;
     args->argc = argc;
     args->argv = argv;
+    args->init = init;
 
     pthread_t *thread = malloc(sizeof(pthread_t));
     pthread_attr_t attr;
     pthread_attr_init(&attr);
+    pthread_mutex_lock(init); // lock init so it will block after pthread_create returns. locked here so it's definitely locked on thread start
     pthread_create(thread, &attr, (void*)behaviour_start, (void*)args);
+
+    // wait for component initialisation to complete
+    pthread_mutex_lock(init);
+    // init has served its purpose, clean up
+    pthread_mutex_destroy(init);
+    free(init);
 
     void **temp;
     //pthread_join(*thread, temp);
@@ -70,6 +82,12 @@ void component_yield(void)
 }
 
 // channel functions
+static void Channel_decRef(Channel_PNTR pntr){
+        channel_unbind(pntr);
+	DAL_decRef(pntr->buffer);
+        DAL_decRef(pntr->connections);
+}
+
 Channel_PNTR channel_create(int typesize)
 {
 	Channel_PNTR this = (Channel_PNTR)DAL_alloc(sizeof(Channel), true);
@@ -95,19 +113,56 @@ Channel_PNTR channel_create(int typesize)
         return(this);
 }
 
-static void Channel_decRef(Channel_PNTR pntr){
-        channel_unbind(pntr);
-	DAL_decRef(pntr->buffer);
-        DAL_decRef(pntr->connections);
-}
-
 bool channel_bind(Channel_PNTR id1, Channel_PNTR id2)
 {
-	return false;
+	pthread_mutex_lock(&(id1->mutex));
+	pthread_mutex_lock(&(id2->mutex));
+
+	// check not both IN or OUT
+	if(id1->direction == id2->direction)
+	{
+		return false;
+	}
+
+	// check not already connected
+	// assuming bind always adds to both channels' lists, we only need to check one channel for the other
+	if(containsElement(id1->connections, (void*)id2))
+	{
+		return false;
+	}
+
+	// add to conns lists
+	insertElement(id1->connections, id2);
+	insertElement(id2->connections, id1);
+
+	// increment conns sems
+	sem_post(&(id1->conns_sem));
+	sem_post(&(id2->conns_sem));
+
+	pthread_mutex_unlock(&(id1->mutex));
+	pthread_mutex_unlock(&(id2->mutex));
+	return true;
 }
 
 void channel_unbind(Channel_PNTR id)
 {
+        pthread_mutex_lock(&(id->mutex));
+
+	// iterate through list, locking then disconnecting
+	unsigned int length = getListLength(id->connections);
+	Channel_PNTR opposite; // channel on the opposite side of current connection
+
+	int i;
+	for(i = 0; i < length; i++)
+	{
+		opposite = getElementN(id->connections, i);
+		pthread_mutex_lock(&(opposite->mutex));
+		removeElement(opposite->connections, id);
+		pthread_mutex_unlock(&(opposite->mutex));
+		removeElement(id->connections, opposite);
+	}
+
+        pthread_mutex_unlock(&(id->mutex));
 	return;
 }
 
