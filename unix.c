@@ -50,7 +50,7 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     pthread_t *thread = malloc(sizeof(pthread_t));
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_mutex_lock(init); // lock init so it will block after pthread_create returns. locked here so it's definitely locked on thread start
+    pthread_mutex_trylock(init); // lock init so it will block after pthread_create returns. locked here so it's definitely locked on thread start. note: do not want to block here.
     pthread_create(thread, &attr, (void*)behaviour_start, (void*)args);
 
     // wait for component initialisation to complete
@@ -116,14 +116,14 @@ Channel_PNTR channel_create(int typesize)
 
 bool channel_bind(Channel_PNTR id1, Channel_PNTR id2)
 {
-	pthread_mutex_lock(&(id1->mutex));
-	pthread_mutex_lock(&(id2->mutex));
-
 	// check not both IN or OUT
 	if(id1->direction == id2->direction)
 	{
 		return false;
 	}
+
+	pthread_mutex_lock(id1->direction == IN ? &(id1->mutex) : &(id2->mutex));
+	pthread_mutex_lock(id1->direction == IN ? &(id2->mutex) : &(id1->mutex));
 
 	// check not already connected
 	// assuming bind always adds to both channels' lists, we only need to check one channel for the other
