@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include "Bool.h"
 #include "setjmp.h"
 #include "DAL_mem.h"
@@ -23,7 +22,9 @@
 #include "IteratedList.h"
 
 // channel struct stuff
-typedef enum { IN, OUT } chan_dir;
+typedef enum { CHAN_IN, CHAN_OUT } chan_dir;
+
+pthread_mutex_t conn_op_mutex;	// to prevent connect during disconnect and vice versa
 
 typedef struct Channel Channel, *Channel_PNTR;
 struct Channel
@@ -31,10 +32,11 @@ struct Channel
 	void (*decRef)(Channel_PNTR pntr); // GC decRef
 	chan_dir direction;	// for error checking in bind, etc.
 	size_t typesize;	// how large the buffer is
-	void* buffer;		// data to send/receive
+	void* buffer;		// pointer to data to send/receive
 	bool ready;		// ready flag
+	bool nd_received;	// used by select
 	List_PNTR connections; 	// list of type Channel_PNTR, channels we're connected to
-	sem_t conns_sem;	// how many connections available
+	pthread_mutex_t conns_mutex;	// connections available mutex
 	pthread_mutex_t mutex;	// for locking the channel
 	pthread_mutex_t blocked;	// block component if waiting for other channel
 };
@@ -110,44 +112,9 @@ void component_exit();
 
 void component_yield(void);
 
-// channel struct typedefs
-/* let's get rid of this garbage and start from scratch.
-// Channel payload tag def
-typedef enum datatag { SCALAR, POINTER } datatag_t;
-
-// Union for scalar channel payload 
-typedef union ScalarUnion ScalarUnion, *ScalarUnion_PNTR;
-union ScalarUnion {
-  int int_value;
-  float real_value;
-  bool bool_value;
-  uint8_t byte_value;
-};
-
-// The channel payload definition
-typedef struct ChannelPayload ChannelPayloadStruct, *ChannelPayload_PNTR;
-struct ChannelPayload {
-  datatag_t tag;
-  ScalarUnion scalar;
-  void* pointer_value;
-};
-
-
-typedef struct Channel ChannelStruct, *Channel_PNTR;
-struct Channel {
-  void (*decRef)(Channel_PNTR pntr); // decRef for garbage collection
-  unsigned ID;                 // unique identity of a channel
-  enum direction dir;                 // records insense type e.g. "in integer"
-  int typesize;
-  ChannelPayloadStruct buffer; // has tag, pointer, and union of scalars
-  List_PNTR connections;       // list of connections to other half channels
-  bool *ready;                 // ready flag (pntr) can be shared during select
-};
-*/
-
 // channel functions
 
-Channel_PNTR channel_create(int typesize);
+Channel_PNTR channel_create(int typesize, chan_dir direction);
 
 static void Channel_decRef(Channel_PNTR pntr);
 
