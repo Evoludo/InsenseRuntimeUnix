@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include "Bool.h"
 #include "setjmp.h"
 #include "DAL_mem.h"
@@ -36,9 +37,10 @@ struct Channel
 	bool ready;		// ready flag
 	bool nd_received;	// used by select
 	List_PNTR connections; 	// list of type Channel_PNTR, channels we're connected to
-	pthread_mutex_t conns_mutex;	// connections available mutex
+	sem_t conns_sem;	// connections available mutex
 	pthread_mutex_t mutex;	// for locking the channel
-	pthread_mutex_t blocked;	// block component if waiting for other channel
+	sem_t blocked;		// block component if waiting for other channel
+	sem_t actually_received;	// make sure data can't be changed until after a receive has completed
 };
 
 //typedef Channel_PNTR chan_id; // channel pointer is unique, let's use it as id (remove when refactoring)
@@ -103,6 +105,9 @@ typedef struct args_s
 	void** argv;
 	pthread_mutex_t* init;
 } args_s;
+
+int num_threads;
+sem_t can_exit;
 
 void *component_create(void(*behaviour)(), int struct_size, int stack_size, int argc, void *argv[]);
 

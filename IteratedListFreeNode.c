@@ -10,7 +10,7 @@
 
 void listFreeNode(ListNode_PNTR node){
   // force ref count decrement on object being kept in node payload
-  DAL_decRef(node->payload);
+  //DAL_decRef(node->payload);
   BASE_mem_free(node);
 }
 

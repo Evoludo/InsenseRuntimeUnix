@@ -78,9 +78,9 @@ static void List_decRef(List_PNTR pntr){
 // In contrast, memory for list payload is garbage collected, may have same
 // item in many lists ... so listFreeNode calls DAL_decRef on these objects
 
-void listFreeNode(ListNode_PNTR node){
+/*void listFreeNode(ListNode_PNTR node){
   // force ref count decrement on object being kept in node payload
   DAL_decRef(node->payload);
   BASE_mem_free(node);
-}
+}*/
 

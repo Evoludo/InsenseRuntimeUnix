@@ -26,6 +26,8 @@ void behaviour_start(args_s *args) // wrapper for behaviour entry point, to pass
 void *component_create(void(*behaviour)(void*), int struct_size, int stack_size, int argc, void *argv[])
 {
     Ithis_s *this_ptr;
+    extern sem_t can_exit;
+    extern int  num_threads;
 
     if((this_ptr = (Ithis_s*)DAL_alloc(struct_size, true)) == NULL)
     {
@@ -61,8 +63,13 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     pthread_mutex_destroy(init);
     free(init);
 
-    void **temp;
-    //pthread_join(*thread, temp);
+    num_threads++;
+    int val = 0;
+    sem_getvalue(&can_exit, &val);
+    if(val == 1) 	// lock if not locked
+    {
+        sem_wait(&can_exit);
+    }
     return this_ptr;
 }
 
@@ -74,8 +81,15 @@ void component_stop(void *this_ptr)
 
 void component_exit()
 {
-	//pthread_exit(NULL);
-	return;
+	extern int num_threads;
+	extern sem_t can_exit;
+
+	num_threads--;
+	if(num_threads == 0)
+	{
+		sem_post(&can_exit);
+	}
+	pthread_exit(NULL);
 }
 
 void component_yield(void)
@@ -86,8 +100,6 @@ void component_yield(void)
 
 // channel functions
 static void Channel_decRef(Channel_PNTR pntr){
-        channel_unbind(pntr);
-	DAL_decRef(pntr->buffer);
         DAL_decRef(pntr->connections);
 }
 
@@ -104,12 +116,11 @@ Channel_PNTR channel_create(int typesize, chan_dir direction)
 	this->typesize = typesize;
 	this->ready = false;
 	this->nd_received = false;
-	this->connections = DAL_alloc(sizeof(List_PNTR), false);
-        DAL_assign(this->connections, Construct_List());	// empty list of connections
-	pthread_mutex_init(&(this->conns_mutex), NULL);		// initialise mutexes
+        DAL_assign(&(this->connections), Construct_List());	// empty list of connections
+	sem_init(&(this->conns_sem), 0, 0);		// initialise mutexes and semaphores
 	pthread_mutex_init(&(this->mutex), NULL);
-	pthread_mutex_init(&(this->blocked), NULL);
-	pthread_mutex_trylock(&(this->blocked));		// blocked should *always* be locked, so that passive parts will always wait; note: do not want to block here
+	sem_init(&(this->blocked), 0, 0);
+	sem_init(&(this->actually_received), 0, 0);
 
 #if DEBUG > 1
         printf("Construct_HalfChannel: ch=%p ready=%b connections=%p typesize=%d \n",
@@ -145,8 +156,18 @@ bool channel_bind(Channel_PNTR id1, Channel_PNTR id2)
 	insertElement(id2->connections, id1);
 
 	// unlock conns mutex in both channels
-	pthread_mutex_unlock(&(id1->conns_mutex));
-	pthread_mutex_unlock(&(id2->conns_mutex));
+	int val = 0;
+	sem_getvalue(&(id1->conns_sem), &val);
+        if(val == 0) 	// never allow semaphore to go above 1; make it act like a mutex
+	{
+		sem_post(&(id1->conns_sem));
+	}
+
+	sem_getvalue(&(id2->conns_sem), &val);
+	if(val == 0)
+	{
+		sem_post(&(id2->conns_sem));
+	}
 
 	pthread_mutex_unlock(&(id1->mutex));
 	pthread_mutex_unlock(&(id2->mutex));
@@ -167,8 +188,8 @@ void channel_unbind(Channel_PNTR id)
 	{
 		opposite = getElementN(id->connections, i);	// fetch current opposite half-channel
 
-       		pthread_mutex_lock(id->direction == CHAN_IN ? &(id->conns_mutex) : &(opposite->conns_mutex) );
-       		pthread_mutex_lock(id->direction == CHAN_IN ? &(opposite->conns_mutex) : &(id->conns_mutex) );
+       		sem_wait(id->direction == CHAN_IN ? &(id->conns_sem) : &(opposite->conns_sem) );
+       		sem_wait(id->direction == CHAN_IN ? &(opposite->conns_sem) : &(id->conns_sem) );
        		pthread_mutex_lock(id->direction == CHAN_IN ? &(id->mutex) : &(opposite->mutex) );
        		pthread_mutex_lock(id->direction == CHAN_IN ? &(opposite->mutex) : &(id->mutex) );
 
@@ -180,11 +201,11 @@ void channel_unbind(Channel_PNTR id)
 		
 		if(!isEmpty(id->connections))
 		{
-			pthread_mutex_unlock(&(id->conns_mutex));
+			sem_post(&(id->conns_sem));
 		}
 		if(!isEmpty(opposite->connections))
 		{
-			pthread_mutex_unlock(&(opposite->conns_mutex));
+			sem_post(&(opposite->conns_sem));
 		}
 	}
 
@@ -199,7 +220,7 @@ int channel_select(struct select_struct *s)
 
 int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
 {
-	pthread_mutex_lock(&(id->conns_mutex));
+	sem_wait(&(id->conns_sem));
 	pthread_mutex_lock(&(id->mutex));
 
 	id->buffer = data;
@@ -224,11 +245,18 @@ int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
 			id->ready = false;
 			id->nd_received = true;
 			
-			pthread_mutex_unlock(&(match->blocked));
+			sem_post(&(match->blocked));
+			sem_wait(&(match->actually_received));
 			pthread_mutex_unlock(&(id->mutex));
 			pthread_mutex_unlock(&(match->mutex));
 
-			pthread_mutex_unlock(&(id->conns_mutex));
+			
+			int val = 0;
+			sem_getvalue(&(id->conns_sem), &val);
+			if(val == 0)
+			{
+				sem_post(&(id->conns_sem));
+			}
 			return 0;
 		}
 			
@@ -236,15 +264,20 @@ int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
 		pthread_mutex_unlock(&(match->mutex));		
 	}
 
-	pthread_mutex_unlock(&(id->conns_mutex));
-	pthread_mutex_lock(&(id->blocked));	// blocked should always be locked, so wait here until data is taken by active part of a receive
+	int val = 0;
+	sem_getvalue(&(id->conns_sem), &val);
+	if(val == 0)
+	{
+		sem_post(&(id->conns_sem));
+	}
+	sem_wait(&(id->blocked));	// blocked should always be locked, so wait here until data is taken by active part of a receive
 
 	return 0;
 }
 
 int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
 {
-	pthread_mutex_lock(&(id->conns_mutex));
+	sem_wait(&(id->conns_sem));
 	pthread_mutex_lock(&(id->mutex));
 
 	id->ready = true;
@@ -270,11 +303,16 @@ int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
 			match->ready = false;
 			id->ready = false;
 			
-			pthread_mutex_unlock(&(match->blocked));
+			sem_post(&(match->blocked));
 			pthread_mutex_unlock(&(match->mutex));
 			pthread_mutex_unlock(&(id->mutex));
 
-			pthread_mutex_unlock(&(id->conns_mutex));
+			int val = 0;
+			sem_getvalue(&(id->conns_sem), &val);
+			if(val == 0)
+			{
+				sem_post(&(id->conns_sem));
+			}
 			return 0;
 		}
 			
@@ -282,10 +320,17 @@ int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
 		pthread_mutex_unlock(&(match->mutex));		
 	}
 
-	pthread_mutex_unlock(&(id->conns_mutex));
-	pthread_mutex_lock(&(id->blocked));	// blocked should always be locked, so wait here until data is sent by active part of a send
+	int val = 0;
+	sem_getvalue(&(id->conns_sem), &val);
+	if(val == 0)
+	{
+		sem_post(&(id->conns_sem));
+	}
+	sem_wait(&(id->blocked));	// wait here until data is ready in active part of a send
 
 	memcpy(data, id->buffer, id->typesize);	// receiver now has pointer; copy data
+	
+	sem_post(&(id->actually_received));
 	
 	return 0;
 }
@@ -295,7 +340,3 @@ int channel_multicast_send(Channel_PNTR id, void *buffer)
 	return 0;
 }
 
-void remoteAnonymousUnbind_proc(Channel_PNTR id, void* var)
-{
-	return;
-}
