@@ -246,9 +246,9 @@ int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
 			id->nd_received = true;
 			
 			sem_post(&(match->blocked));
-			sem_wait(&(match->actually_received));
 			pthread_mutex_unlock(&(id->mutex));
 			pthread_mutex_unlock(&(match->mutex));
+			sem_wait(&(match->actually_received));
 
 			
 			int val = 0;
@@ -316,8 +316,8 @@ int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
 			return 0;
 		}
 			
-		pthread_mutex_unlock(&(id->mutex));
 		pthread_mutex_unlock(&(match->mutex));		
+		pthread_mutex_unlock(&(id->mutex));
 	}
 
 	int val = 0;
