@@ -1,3 +1,11 @@
+/**
+ * NetPacket.h
+ * Type operations for NetPacket struct used by NetworkSendComponent and NetworkReceiveComponent.
+ *
+ * @author Andrew Bell
+ *
+ */
+
 #include "NetPacket.h"
 
 NetPacket_PNTR copy_NetPacket(NetPacket_PNTR p)

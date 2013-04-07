@@ -4,7 +4,7 @@
  *  Created on: 5 Nov 2012
  *      Author: Andrew Bell
  *
- *      Includes and definitions to replace those lost from InceOS, for compatibility. Most of these will probably be removed.
+ *      Includes and definitions to replace those lost from InceOS, for compatibility.
  */
 
 #ifndef UNIX_H_

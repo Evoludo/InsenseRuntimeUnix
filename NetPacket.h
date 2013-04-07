@@ -1,3 +1,11 @@
+/**
+ * NetPacket.h
+ * Header file for netpacket struct used by NetworkSendComponent and NetworkReceiveComponent
+ *
+ * @author Andrew Bell
+ *
+ */
+
 #ifndef NETPACKET_H
 #define NETPACKET_H
 #include "InsenseRuntime.h"

@@ -1,3 +1,11 @@
+/**
+ * NetworkSendComponent.c
+ * Component to serialise and send data to another InSense program using sockets.
+ *
+ * @author Andrew Bell
+ *
+ */
+
 #include "NetworkSendComponent.h"
 
 static void decRef_NetworkSend( NetworkSendPNTR this )

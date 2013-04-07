@@ -1,5 +1,6 @@
 /*
  * unix.c
+ * Unix-specific functions for basic InSense operations
  *
  *  Created on: 8 Nov 2012
  *      Author: Andrew Bell

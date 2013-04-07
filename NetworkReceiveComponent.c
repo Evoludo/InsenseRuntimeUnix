@@ -1,3 +1,12 @@
+/**
+ * NetworkReceiveComponent.c
+ * Component to receive send data from another InSense program using sockets and deserialise it.
+ *
+ * @author Andrew Bell
+ *
+ */
+
+
 #include "NetworkReceiveComponent.h"
 
 static void decRef_NetworkReceive( NetworkReceivePNTR this )

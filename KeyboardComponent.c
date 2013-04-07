@@ -1,3 +1,13 @@
+/**
+ * KeyboardComponent.c
+ * A component that reads lines in from the keyboard and sends them on an output channel.
+ * Blocks unless there is input on stdin, then as normal on sending to a channel.
+ *
+ * @author Andrew Bell
+ *
+ */
+
+
 #include "KeyboardComponent.h"
 
 static void decRef_Keyboard( KeyboardPNTR this )

@@ -1,3 +1,12 @@
+/**
+ * UnixNetwork.c
+ * Socket operations.
+ *
+ * @author Andrew Bell
+ *
+ */
+
+
 #include "UnixNetwork.h"
 
 // bind and listen for incoming connections
@@ -15,6 +24,10 @@ int unicast_listen()
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(PORT);
 
+	// Allow to bind if socket is in TIME_WAIT after closure
+	int setting = 1;
+	setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, &setting, sizeof(setting));
+
 	// bind to port
 	if(bind(lsock, (struct sockaddr*) &addr, sizeof(addr)) < 0) 
 	{
@@ -26,6 +39,7 @@ int unicast_listen()
 
 	// listen for incoming connections
 	listen(lsock, CONQUEUESIZE);
+	fprintf(stderr, "Listening on port %d\n", PORT);
 	return lsock;
 }
 
@@ -75,12 +89,14 @@ void unicast_send(char* host, void* data, size_t size)
 		if ((sock = socket(curr_addr->ai_family, curr_addr->ai_socktype, curr_addr->ai_protocol)) < 0)
 		{
 			perror("Error: could create socket to send on");
+			sleep(1);
 			continue;
 		}
 
 		if(connect(sock, curr_addr->ai_addr, curr_addr->ai_addrlen) < 0)
 		{
 			perror("Error: could not connect");
+			sleep(1);
 			continue;
 		}
 	
@@ -100,7 +116,12 @@ void unicast_send(char* host, void* data, size_t size)
 	fullsend(sock, &sizen, sizeof(uint32_t)); // send the size as a 32 bit integer, making sure it's portable
 	fullsend(sock, data, size);
 
+	char* dummy[32];
+	int dr;
+	while((dr = recv(sock, dummy, 32, 0)) != 0); // eat any data sent back until the socket is closed by the other side
+
 	close(sock);
+
 	freeaddrinfo(servaddr);
 }
 
@@ -175,6 +196,8 @@ int unicast_receive(int lsock, void** data, char** address)
 	char* addr_buff = malloc(clength);
 	inet_ntop(AF_INET, &(caddr.sin_addr), addr_buff, clength);
 	*address = addr_buff;
-	
+
+	close(datasock);
+
 	return totalreceived;
 }

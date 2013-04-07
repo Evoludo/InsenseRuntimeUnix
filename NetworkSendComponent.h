@@ -1,3 +1,12 @@
+/**
+ * NetworkSendComponent.h
+ * Header for component to serialise and send data to another InSense program using sockets.
+ *
+ * @author Andrew Bell
+ *
+ */
+
+
 #include "unix.h"
 #include "String.h"
 #include "NetPacket.h"

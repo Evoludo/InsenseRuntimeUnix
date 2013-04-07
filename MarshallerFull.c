@@ -1,3 +1,13 @@
+/**
+ * MarshallerFull.c
+ * All the serialisation and deserialisation functions. Grabbed 
+ * from marshaller.c generated from insense_progs/unix/marshaller_types.isf
+ * and RadioPacket.c
+ *
+ * @author Andrew Bell
+ *
+ */
+
 // Generated from: uk.ac.stand.cs.insense.compiler.unixCCgen.TypeMarshaller::printIncludes
 #include "InsenseRuntime.h"
 #include "FunctionPair.h"

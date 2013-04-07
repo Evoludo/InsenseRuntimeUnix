@@ -1,3 +1,11 @@
+/**
+ * NetworkReceiveComponent.h
+ * Header for component to receive send data from another InSense program using sockets and deserialise it.
+ *
+ * @author Andrew Bell
+ *
+ */
+
 #include "unix.h"
 #include "String.h"
 #include "NetPacket.h"

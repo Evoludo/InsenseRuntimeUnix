@@ -1,3 +1,11 @@
+/**
+ * UnixNetwork.h
+ * Header for socket operations.
+ *
+ * @author Andrew Bell
+ *
+ */
+
 #ifndef UNIXNETWORK_H
 #define UNIXNETWORK_H
 

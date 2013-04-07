@@ -1,3 +1,13 @@
+/**
+ * MarshallerFull.h
+ * Header for serialisation and deserialisation functions. Grabbed 
+ * from marshaller.h generated from insense_progs/unix/marshaller_types.isf,
+ * and RadioPacket.h
+ *
+ * @author Andrew Bell
+ *
+ */
+
 // Generated from: uk.ac.stand.cs.insense.compiler.unixCCgen.TypeMarshaller::printHeaderStart
 #ifndef MARSHALLER_H_
 #define MARSHALLER_H_

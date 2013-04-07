@@ -1,3 +1,11 @@
+/**
+ * KeyboardComponent.h
+ * Header for keyboard component. Standard component stuff.
+ * 
+ * @author Andrew Bell
+ *
+ */
+
 #include "unix.h"
 #include "String.h"
 
