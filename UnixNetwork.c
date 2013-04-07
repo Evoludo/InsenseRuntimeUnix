@@ -9,6 +9,7 @@ int unicast_listen()
 	if((lsock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
 		perror("Error: could not open socket to listen on");
+		return -1;
 	}
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
@@ -20,11 +21,30 @@ int unicast_listen()
 		char err[256];
 		sprintf(err, "Error: could not bind to port %d", PORT);
 		perror(err);
+		return -1;
 	}
 
 	// listen for incoming connections
 	listen(lsock, CONQUEUESIZE);
 	return lsock;
+}
+
+// make sure all data is sent from buffer
+int fullsend(int socket, void* buffer, int length)
+{
+	int totalsent = 0;
+	int bytessent = 0;
+
+	while(totalsent < length)
+	{
+		bytessent = send(socket, buffer + totalsent, length - totalsent, 0);
+		if(bytessent < 0)
+		{
+			perror("Error: could not send on socket");
+			return totalsent;
+		}
+		totalsent += bytessent;
+	}
 }
 
 // will guarantee message received if connection can be made and sustained; if connection drops, data is lost
@@ -44,8 +64,8 @@ void unicast_send(char* host, void* data, size_t size)
 	if((errval = getaddrinfo(host, TOSTRING(PORT), &hints, &servaddr)) != 0)
 	{
 		char err[256];
-		fprintf(stderr, "Error: %s", gai_strerror(errval));
-		exit(1);
+		fprintf(stderr, "Error: %s\n", gai_strerror(errval));
+		return;
 	}
 
 	
@@ -60,7 +80,7 @@ void unicast_send(char* host, void* data, size_t size)
 
 		if(connect(sock, curr_addr->ai_addr, curr_addr->ai_addrlen) < 0)
 		{
-			perror("Error: trying next address");
+			perror("Error: could not connect");
 			continue;
 		}
 	
@@ -70,61 +90,91 @@ void unicast_send(char* host, void* data, size_t size)
 	if(curr_addr == NULL)
 	{
 		char err[256];
-		sprintf(err, "Error: could connect to %s", host);
+		sprintf(err, "Error: could connect to %s\n", host);
 		perror(err);
+		return;
 	}
 
 	// send data
-	/*int i;
-	for(i = 0; i < size; i += 1024)
-	{
-		send(sock, data + i, (size - i > RECVBUFFSIZE ? RECVBUFFSIZE : size % RECVBUFFSIZE), 0);
-	}*/
-
-	send(sock, data, size, 0);
+	uint32_t sizen = htonl((uint32_t)size);
+	fullsend(sock, &sizen, sizeof(uint32_t)); // send the size as a 32 bit integer, making sure it's portable
+	fullsend(sock, data, size);
 
 	close(sock);
 	freeaddrinfo(servaddr);
 }
 
 // accept a connection from the queue, or block until one exists; returns bytes received
-int unicast_receive(int lsock, void** data)
+int unicast_receive(int lsock, void** data, char** address)
 {
 	// set up data structures
 	struct sockaddr_in caddr;
 	socklen_t clength = sizeof(caddr);
 	int datasock;
 	void* buffer;
-	void* temp;
 
 	// wait until connection received
 	if((datasock = accept(lsock, (struct sockaddr*) &caddr, &clength)) < 0)
 	{
 		perror("Error: could not accept connection on socket");
+		return -1;
 	}
 
 	// receive data
-	buffer = malloc(RECVBUFFSIZE); // going to free this at the end of the function anyway
+	buffer = malloc(RECVBUFFSIZE);
+	bool beginning = true;
 	int i = 0;
-	int bytesreceived;
 	int totalreceived = 0;
-	while((bytesreceived = recv(datasock, buffer, RECVBUFFSIZE, 0)) > 0)
+	int bytesreceived;
+	int bytesremaining;
+	int bytestocopy;
+	int length;
+	while((bytesreceived = recv(datasock, buffer, RECVBUFFSIZE, 0)) >= 0)
 	{
-		temp = *data;
-		//data = DAL_alloc(RECVBUFFSIZE * i false);
-		*data = malloc(bytesreceived + RECVBUFFSIZE * i);
+		int offset = 0;
 		
-		if(i > 0)
+		if(beginning)
 		{
-			memcpy(*data, temp, RECVBUFFSIZE * i);
-			//DAL_free(temp);
-			free(temp);
+			offset = 4;
+			length = ntohl(*(int32_t*)buffer); // unserialise the size of the stream
+			bytesremaining = length;
+			if(*data != NULL)
+			{
+				free(*data);
+			}
+			*data = malloc(length);
+
+			beginning = false;
 		}
 
-		memcpy(*data + RECVBUFFSIZE * i, buffer, bytesreceived);
-		totalreceived += bytesreceived;
-		i++;
-	}
-	return totalreceived;
+		if(bytesreceived == 0)
+		{
+			bytestocopy = bytesremaining <= (RECVBUFFSIZE - offset) ? bytesremaining : (RECVBUFFSIZE - offset);
+		}
+		else
+		{
+			bytestocopy = bytesreceived - offset;
+		}
+		memcpy(*data + totalreceived, buffer + offset, bytestocopy);
+		totalreceived += bytestocopy;
+		
+		bytesremaining = length - totalreceived;
 
+		if(bytesremaining == 0)
+		{
+			break;
+		}
+	}
+	free(buffer);
+	if(bytesreceived < 0)
+	{
+		perror("Error: could not read from socket");
+		return 0;
+	}
+
+	char* addr_buff = malloc(clength);
+	inet_ntop(AF_INET, &(caddr.sin_addr), addr_buff, clength);
+	*address = addr_buff;
+	
+	return totalreceived;
 }

@@ -66,7 +66,7 @@ void *component_create(void(*behaviour)(void*), int struct_size, int stack_size,
     num_threads++;
     int val = 0;
     sem_getvalue(&can_exit, &val);
-    if(val == 1) 	// lock if not locked
+    if(val >= 1) 	// lock if not locked
     {
         sem_wait(&can_exit);
     }
@@ -218,7 +218,7 @@ int channel_select(struct select_struct *s)
 	return 0;
 }
 
-int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
+int channel_send(Channel_PNTR id, void *data)
 {
 	sem_wait(&(id->conns_sem));
 	pthread_mutex_lock(&(id->mutex));
@@ -275,7 +275,7 @@ int channel_send(Channel_PNTR id, void *data, jmp_buf *ex_handler)
 	return 0;
 }
 
-int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
+int channel_receive(Channel_PNTR id, void *data)
 {
 	sem_wait(&(id->conns_sem));
 	pthread_mutex_lock(&(id->mutex));
@@ -329,7 +329,7 @@ int channel_receive(Channel_PNTR id, void *data, bool in_ack_after)
 	sem_wait(&(id->blocked));	// wait here until data is ready in active part of a send
 
 	memcpy(data, id->buffer, id->typesize);	// receiver now has pointer; copy data
-	
+
 	sem_post(&(id->actually_received));
 	
 	return 0;

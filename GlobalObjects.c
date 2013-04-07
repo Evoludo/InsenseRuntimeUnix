@@ -14,6 +14,11 @@ bool success;
 // Map for (de)serialisation
 BSTMap_PNTR serialiserMap;
 
+// Unix globs
+KeyboardPNTR Keyboard_glob;
+NetworkReceivePNTR NetworkReceive_glob;
+NetworkSendPNTR NetworkSend_glob;
+
 void initDALGlobalObjects(){
   success = false;
   
@@ -44,5 +49,25 @@ void initDALGlobalObjects(){
 			    (deserialf_t) deserialize_AckData )  ) ;
 #endif /* DALINTERNODECHANNEL */
 
+}
 
+void initUnixGlobalObjects()
+{
+	// init semaphore for thread counting
+	sem_init(&can_exit, 0, 1);
+	num_threads = 0;
+
+	// init channel connect/disconnect mutex
+	pthread_mutex_init(&conn_op_mutex, NULL);
+
+	// init keyboard component
+	DAL_assign(&Keyboard_glob, component_create(Construct_Keyboard0, sizeof(KeyboardStruct) , 52, 0, NULL));
+
+	// init network components
+	DAL_assign(&NetworkReceive_glob, component_create(Construct_NetworkReceive0, sizeof(NetworkReceiveStruct) , 52, 0, NULL));
+	DAL_assign(&NetworkSend_glob, component_create(Construct_NetworkSend0, sizeof(NetworkSendStruct) , 52, 0, NULL));
+
+	// don't wait for any background components to exit after all user components have exited
+	sem_post(&can_exit);
+	num_threads = 0;
 }

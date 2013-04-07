@@ -13,11 +13,13 @@ int main(int argc, char* argv[])
 	void** string = malloc(sizeof(void*));
 //	while(1)
 //	{
-		int n = unicast_receive(socket, string);
+		char* address;
+		int n = unicast_receive(socket, string, &address);
 		if(*string != 0)
 		{
 			//(*(char**)string)[n] = '\0';
 			//printf("%s", *(char**)string);
+			printf("%d bytes received from %s\n", n, address);
 			fwrite(*string, n, 1, fp);
 		
 		}

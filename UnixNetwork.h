@@ -8,6 +8,8 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h> 
+#include <stdint.h>
+#include <stdbool.h>
 
 #define PORT 4120
 #define STRINGEVAL(x) #x
@@ -22,6 +24,6 @@ int unicast_listen();
 void unicast_send(char* string, void* data, size_t size);
 
 // accept a connection from the queue, or block until one exists
-int unicast_receive(int lsock, void** data);
+int unicast_receive(int lsock, void** data, char** address);
 
 #endif

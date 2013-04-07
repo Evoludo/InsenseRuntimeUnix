@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		perror("File");
 		exit(1);
 	}
-	int size = 1024 * 10;
+	int size = 6;
 	void* string = malloc(size);
 	fread(string, size, 1, fp);
 	unicast_send("localhost", string, size);

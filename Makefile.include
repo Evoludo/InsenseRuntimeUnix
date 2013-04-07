@@ -26,7 +26,7 @@ C_STANDARD_FUNCTIONS = getchar.c getstring.c print_tc.c
 
 C_STRING = cstring_address_to_string.c cstring_memncpy.c cstring_myitoa.c cstring_string_to_address.c  cstring_stringcat.c cstring_stringStartsWith.c 
 
-UNIX_FUNCTIONS = unix.c
+UNIX_FUNCTIONS = unix.c KeyboardComponent.c UnixNetwork.c NetPacket.c NetworkReceiveComponent.c NetworkSendComponent.c RadioPacket.c
 
 ITERATED_LIST = IteratedListConstruct.c IteratedListContains.c \
   IteratedListDisplayList.c IteratedListFreeNode.c \

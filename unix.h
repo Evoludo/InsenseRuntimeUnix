@@ -129,9 +129,9 @@ void channel_unbind(Channel_PNTR id);
 
 int channel_select(struct select_struct *s);
 
-int channel_send(Channel_PNTR id, void *buffer, jmp_buf *ex_handler);
+int channel_send(Channel_PNTR id, void *buffer);
 
-int channel_receive(Channel_PNTR id, void *buffer, bool in_ack_after);
+int channel_receive(Channel_PNTR id, void *buffer);
 
 int channel_multicast_send(Channel_PNTR id, void *buffer);
 
