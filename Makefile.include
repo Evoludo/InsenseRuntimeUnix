@@ -26,7 +26,7 @@ C_STANDARD_FUNCTIONS = getchar.c getstring.c print_tc.c
 
 C_STRING = cstring_address_to_string.c cstring_memncpy.c cstring_myitoa.c cstring_string_to_address.c  cstring_stringcat.c cstring_stringStartsWith.c 
 
-UNIX_FUNCTIONS = unix.c KeyboardComponent.c UnixNetwork.c NetPacket.c NetworkReceiveComponent.c NetworkSendComponent.c RadioPacket.c
+UNIX_FUNCTIONS = unix.c KeyboardComponent.c UnixNetwork.c NetPacket.c NetworkReceiveComponent.c NetworkSendComponent.c MarshallerFull.c
 
 ITERATED_LIST = IteratedListConstruct.c IteratedListContains.c \
   IteratedListDisplayList.c IteratedListFreeNode.c \
@@ -37,8 +37,6 @@ ITERATED_LIST = IteratedListConstruct.c IteratedListContains.c \
   IteratedListSearchList.c
 
 DAL_MEM = DAL_mem_common.c DAL_mem_contains_pointers.c DAL_mem_getRef.c
-
-RADIO = RadioPacket.c InsenseRadio.c
 
 INSENSE_SRCFILES = $(ANY_TYPE) $(C_STRING) $(UNIX_FUNCTIONS) $(ITERATED_LIST) DAL_error.c $(DAL_MEM) GlobalVars.c IArray.c \
   $(STANDARD_FUNCTIONS) Bool.c StdOut.c String.c FunctionPair.c GlobalObjects.c BSTMap.c StackSpaceTrack.c

@@ -3,6 +3,7 @@
 #define MARSHALLER_H_
 
 #include "String.h"
+#include "AnyType.h" 
 
 // Generated from: uk.ac.stand.cs.insense.compiler.unixCCgen.TypeMarshaller::printSerializerPrototype
 extern void* serialize_b( bool *p,int* size ) ;
@@ -30,6 +31,10 @@ extern void* deserialize_8( void* p )  ;
 extern void* deserialize_s( void* p )  ;
 
 extern void initializeSerializerFunctions();
+
+extern void *serialiseAnyType(AnyTypePNTR data, int *size);
+
+extern AnyTypePNTR deserialiseToAnyType(void *buffer);
 
 // Generated from: uk.ac.stand.cs.insense.compiler.unixCCgen.TypeMarshaller::printHeaderEnd
 #endif	// MARSHALLER_H_

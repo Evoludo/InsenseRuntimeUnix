@@ -4,7 +4,7 @@
 #include "BSTMap.h"
 #include "GlobalObjects.h"
 #include "cstring.h"
-#include "marshaller.h"
+#include "MarshallerFull.h"
 
 
 #ifndef DALSMALL
@@ -266,3 +266,16 @@ void *serialiseAnyType(AnyTypePNTR data, int *size){
 AnyTypePNTR deserialiseToAnyType(void *buffer){
 	AnyTypePNTR newAny; void *data;
 	FunctionPairPNTR funcs = mapGet(serialiserMap, (char *) buffer);
+	if (funcs == NULL || funcs->des == NULL){
+		DAL_error(SERIALISATION_ERROR);
+		PRINTF("des2any:%s \n", (char *) buffer);
+		return NULL;
+	}
+	//PRINTF(" des2any:%s ", (char *) buffer);
+	data = ((char *) buffer) + strlen((char *)buffer) + 1; // 1 for \0
+	newAny = (*(funcs->des))(data);
+	//PRINTF("%p\n", newAny->value);
+	return newAny;
+}
+
+
