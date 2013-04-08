@@ -21,7 +21,6 @@ void behaviour_start(args_s *args) // wrapper for behaviour entry point, to pass
 	(*behaviour)(this_ptr, argc, argv, init);
 
 	free(args);
-	free(init);
 }
 
 void *component_create(void(*behaviour)(void*), int struct_size, int stack_size, int argc, void *argv[])

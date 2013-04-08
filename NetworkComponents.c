@@ -10,7 +10,7 @@ void behaviour_Keyboard( KeyboardPNTR this )
 	inceos_event_t op_status;// for exception handling
 
 	int buffsize = 1024;
-	char* buffer = (char*)malloc(buffsize);
+	char* buffer = (char*)malloc(buffsize); // if buff filled, will be replaced with malloc'd space anyway, no DAL_alloc'd
 
 	while( ! this->stopped )
 	{ 
@@ -20,9 +20,8 @@ void behaviour_Keyboard( KeyboardPNTR this )
 		DAL_assign(&send_string , Construct_String0(buffer));
 
 		// Make call to send op 
-		StringPNTR  _lvalue = send_string;
-		DAL_incRef( _lvalue ) ;
-		channel_send( this->output_comp,&_lvalue,NULL  ) ;
+		DAL_incRef( buffer ) ;
+		channel_send( this->output_comp,&buffer,NULL  ) ;
 		// end of send op 
 
 		//printString_proc(this, NULL, Construct_String0("Sent string on output:\n") ) ;
