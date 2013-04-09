@@ -122,10 +122,6 @@ Channel_PNTR channel_create(int typesize, chan_dir direction)
 	sem_init(&(this->blocked), 0, 0);
 	sem_init(&(this->actually_received), 0, 0);
 
-#if DEBUG > 1
-        printf("Construct_HalfChannel: ch=%p ready=%b connections=%p typesize=%d \n",
-                        this, this->ready, this->connections, this->typesize);
-#endif
         return(this);
 }
 
@@ -154,7 +150,6 @@ bool channel_bind(Channel_PNTR id1, Channel_PNTR id2)
 	// add to conns lists
 	insertElement(id1->connections, id2);
 	insertElement(id2->connections, id1);
-	printf("1: %d\n2: %d\n", getListLength(id1->connections), getListLength(id2->connections));
 
 	// unlock conns mutex in both channels
 	int val = 0;
