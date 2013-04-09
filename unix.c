@@ -154,6 +154,7 @@ bool channel_bind(Channel_PNTR id1, Channel_PNTR id2)
 	// add to conns lists
 	insertElement(id1->connections, id2);
 	insertElement(id2->connections, id1);
+	printf("1: %d\n2: %d\n", getListLength(id1->connections), getListLength(id2->connections));
 
 	// unlock conns mutex in both channels
 	int val = 0;
@@ -207,6 +208,7 @@ void channel_unbind(Channel_PNTR id)
 		{
 			sem_post(&(opposite->conns_sem));
 		}
+		length = getListLength(id->connections);
 	}
 
 	pthread_mutex_unlock(&conn_op_mutex);
